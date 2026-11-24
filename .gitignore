@@ -1,0 +1,33 @@
+# ==============================================================================
+# Sistema de Asistencia FISEI - Web | Git Ignore
+# ==============================================================================
+
+# Credenciales sensibles y configuración de entorno
+config/db_credentials.php
+.env
+.env.local
+.env.*.local
+
+# Entornos de desarrollo y editores de código
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.nbproject/
+
+# Logs de ejecución y depuración
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Archivos temporales y de sistema operativo (Windows / macOS)
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+*.tmp
+*~
+
