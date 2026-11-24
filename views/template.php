@@ -7,7 +7,9 @@
  * Bootstrap 5.3 + Bootstrap Icons + SweetAlert2
  */
 
-$currentAction = $_GET['action'] ?? 'matriculacion';
+$currentAction = controllersMvc::accionSolicitada();
+$sesionActiva  = controllersMvc::sesionActiva();
+$esAdmin       = controllersMvc::esAdmin();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -42,6 +44,7 @@ $currentAction = $_GET['action'] ?? 'matriculacion';
                 </div>
             </a>
 
+            <?php if ($sesionActiva): ?>
             <!-- Botón menú móvil -->
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSistema" aria-controls="navbarSistema" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -55,6 +58,8 @@ $currentAction = $_GET['action'] ?? 'matriculacion';
                             <i class="bi bi-house-door me-1"></i> Inicio
                         </a>
                     </li>
+                    <?php if ($esAdmin): ?>
+                    <!-- Opciones administrativas (solo rol ADMIN) -->
                     <li class="nav-item">
                         <a class="nav-link <?= ($currentAction === 'materias') ? 'active' : '' ?>" href="index.php?action=materias">
                             <i class="bi bi-journal-bookmark me-1"></i> Materias
@@ -65,6 +70,7 @@ $currentAction = $_GET['action'] ?? 'matriculacion';
                             <i class="bi bi-person-badge me-1"></i> Matriculación
                         </a>
                     </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link <?= ($currentAction === 'asistencia') ? 'active' : '' ?>" href="index.php?action=asistencia">
                             <i class="bi bi-calendar-check me-1"></i> Asistencia
@@ -80,8 +86,11 @@ $currentAction = $_GET['action'] ?? 'matriculacion';
                 <!-- Acciones de Usuario y Salir -->
                 <div class="d-flex align-items-center gap-3">
                     <div class="text-white text-end d-none d-md-block lh-1">
-                        <small class="fw-semibold d-block">Docente / Admin FISEI</small>
-                        <small class="text-white-50" style="font-size: 0.75rem;">Periodo 2026 - 2027</small>
+                        <small class="fw-semibold d-block"><?= htmlspecialchars($_SESSION['nombre_completo'] ?? '', ENT_QUOTES, 'UTF-8') ?></small>
+                        <small class="text-white-50" style="font-size: 0.75rem;">
+                            <i class="bi <?= $esAdmin ? 'bi-shield-check' : 'bi-person-workspace' ?> me-1"></i><?= $esAdmin ? 'Administrador' : 'Docente' ?>
+                            &bull; @<?= htmlspecialchars($_SESSION['username'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                        </small>
                     </div>
                     <a href="index.php?action=salir" class="btn btn-sm btn-outline-light d-flex align-items-center gap-1 shadow-sm">
                         <i class="bi bi-box-arrow-right"></i>
@@ -89,6 +98,7 @@ $currentAction = $_GET['action'] ?? 'matriculacion';
                     </a>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </nav>
 
@@ -120,5 +130,17 @@ $currentAction = $_GET['action'] ?? 'matriculacion';
 
     <!-- SweetAlert2 v11 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <?php if ($sesionActiva && ($_GET['acceso'] ?? '') === 'denegado'): ?>
+    <!-- Aviso del middleware: intento de acceso a una opción administrativa -->
+    <script>
+        Swal.fire({
+            icon: 'warning',
+            title: 'Acceso Restringido',
+            text: 'Esta opción es exclusiva del rol Administrador.',
+            confirmButtonColor: '#8B0000'
+        });
+    </script>
+    <?php endif; ?>
 </body>
 </html>
