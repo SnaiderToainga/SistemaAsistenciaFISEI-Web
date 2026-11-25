@@ -1,0 +1,10 @@
+.git
+.gitignore
+database/
+config/db_credentials.php
+.env
+.env.*
+*.log
+.vscode/
+.idea/
+README.md
