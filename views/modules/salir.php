@@ -18,7 +18,7 @@
                 Ha cerrado sesión en el Sistema de Control de Asistencia FISEI de forma segura.
             </p>
             <div>
-                <a href="index.php?action=matriculacion" class="btn btn-danger px-4">
+                <a href="index.php?action=login" class="btn btn-danger px-4">
                     <i class="bi bi-box-arrow-in-right me-1"></i>Volver a Ingresar
                 </a>
             </div>

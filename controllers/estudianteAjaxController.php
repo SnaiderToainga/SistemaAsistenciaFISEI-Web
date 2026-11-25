@@ -13,6 +13,10 @@ header('Content-Type: application/json; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
 
 require_once __DIR__ . '/../models/estudianteModel.php';
+require_once __DIR__ . '/controller.php';
+
+// Middleware: solo administradores autenticados
+controllersMvc::verificarSesionAjax(['ADMIN']);
 
 try {
     // Captura de datos tanto de FormData ($_POST) como de cuerpo JSON (fetch)
@@ -28,6 +32,12 @@ try {
 
     // Determinar la acción solicitada
     $accion = $input['accion'] ?? $_GET['accion'] ?? '';
+
+    // Las acciones que modifican datos solo se aceptan por POST
+    $accionesEscritura = ['guardar', 'modificar', 'eliminar'];
+    if (in_array($accion, $accionesEscritura, true) && ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        throw new Exception("Método no permitido para la acción solicitada.");
+    }
 
     switch ($accion) {
 

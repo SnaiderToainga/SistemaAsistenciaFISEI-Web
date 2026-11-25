@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire({
                     icon: 'info',
                     title: 'Estudiante Encontrado',
-                    html: `<b>${est.nombres} ${est.apellidos}</b><br><small class="text-muted">Cédula: ${est.cedula}</small>`,
+                    html: `<b>${escapeHtml(est.nombres)} ${escapeHtml(est.apellidos)}</b><br><small class="text-muted">Cédula: ${escapeHtml(est.cedula)}</small>`,
                     timer: 2000,
                     showConfirmButton: false,
                     timerProgressBar: true
