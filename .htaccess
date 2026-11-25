@@ -1,0 +1,23 @@
+# ==============================================================================
+# Sistema de Asistencia FISEI - Web | Configuración Apache para Producción
+# ==============================================================================
+
+# 1. Desactivar listado de directorios por seguridad
+Options -Indexes
+
+# 2. Documento por defecto
+DirectoryIndex index.php
+
+# 3. Bloquear acceso a archivos sensibles (.git, .env, .sql, .log)
+<FilesMatch "(^\.|\.(sql|env|log|ini|sh|bak)$)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 4. Forzar codificación UTF-8
+AddDefaultCharset UTF-8
