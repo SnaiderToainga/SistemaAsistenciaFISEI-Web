@@ -106,7 +106,7 @@ class ReporteModel {
             throw new Exception("Seleccione una asignatura válida.");
         }
 
-        if ($parcial !== 'Parcial 1' && $parcial !== 'Parcial 2') {
+        if ($parcial !== 'Parcial 1' && $parcial !== 'Parcial 2' && $parcial !== 'Reporte Semestre') {
             $parcial = 'Parcial 1';
         }
 
@@ -130,20 +130,39 @@ class ReporteModel {
             throw new Exception("No tiene permisos para ver el reporte de esta asignatura.");
         }
 
-        // 2. Obtener fechas distintas de clases impartidas en ese parcial
-        $sqlFechas = "SELECT DISTINCT TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha
-                      FROM asistencias
-                      WHERE id_materia = :id_materia AND parcial = :parcial
-                      ORDER BY fecha ASC";
-        $stmtFechas = $pdo->prepare($sqlFechas);
-        $stmtFechas->execute([
-            ':id_materia' => $idMateria,
-            ':parcial'    => $parcial
-        ]);
-
+        // 2. Obtener fechas distintas de clases impartidas
         $fechas = [];
-        foreach ($stmtFechas->fetchAll() as $fila) {
-            $fechas[] = $fila['fecha'];
+        $fechasParcial = [];
+
+        if ($parcial === 'Reporte Semestre') {
+            $sqlFechas = "SELECT DISTINCT TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha, parcial
+                          FROM asistencias
+                          WHERE id_materia = :id_materia
+                          ORDER BY parcial ASC, fecha ASC";
+            $stmtFechas = $pdo->prepare($sqlFechas);
+            $stmtFechas->execute([':id_materia' => $idMateria]);
+
+            foreach ($stmtFechas->fetchAll() as $fila) {
+                if (!isset($fechasParcial[$fila['fecha']])) {
+                    $fechas[] = $fila['fecha'];
+                    $fechasParcial[$fila['fecha']] = $fila['parcial'];
+                }
+            }
+        } else {
+            $sqlFechas = "SELECT DISTINCT TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha
+                          FROM asistencias
+                          WHERE id_materia = :id_materia AND parcial = :parcial
+                          ORDER BY fecha ASC";
+            $stmtFechas = $pdo->prepare($sqlFechas);
+            $stmtFechas->execute([
+                ':id_materia' => $idMateria,
+                ':parcial'    => $parcial
+            ]);
+
+            foreach ($stmtFechas->fetchAll() as $fila) {
+                $fechas[] = $fila['fecha'];
+                $fechasParcial[$fila['fecha']] = $parcial;
+            }
         }
         $totalClases = count($fechas);
 
@@ -157,15 +176,23 @@ class ReporteModel {
         $stmtEst->execute([':id_materia' => $idMateria]);
         $listaEstudiantes = $stmtEst->fetchAll();
 
-        // 4. Obtener todas las asistencias de la materia en ese parcial
-        $sqlAsist = "SELECT id_estudiante, TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha, estado
-                     FROM asistencias
-                     WHERE id_materia = :id_materia AND parcial = :parcial";
-        $stmtAsist = $pdo->prepare($sqlAsist);
-        $stmtAsist->execute([
-            ':id_materia' => $idMateria,
-            ':parcial'    => $parcial
-        ]);
+        // 4. Obtener todas las asistencias de la materia
+        if ($parcial === 'Reporte Semestre') {
+            $sqlAsist = "SELECT id_estudiante, TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha, estado
+                         FROM asistencias
+                         WHERE id_materia = :id_materia";
+            $stmtAsist = $pdo->prepare($sqlAsist);
+            $stmtAsist->execute([':id_materia' => $idMateria]);
+        } else {
+            $sqlAsist = "SELECT id_estudiante, TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha, estado
+                         FROM asistencias
+                         WHERE id_materia = :id_materia AND parcial = :parcial";
+            $stmtAsist = $pdo->prepare($sqlAsist);
+            $stmtAsist->execute([
+                ':id_materia' => $idMateria,
+                ':parcial'    => $parcial
+            ]);
+        }
 
         // Guardar en un arreglo [id_estudiante][fecha] = estado
         $asistenciasPorAlumno = [];
@@ -246,10 +273,11 @@ class ReporteModel {
         }
 
         return [
-            'materia'     => $materia,
-            'parcial'     => $parcial,
-            'fechas'      => $fechas,
-            'resumen'     => [
+            'materia'        => $materia,
+            'parcial'        => $parcial,
+            'fechas'         => $fechas,
+            'fechas_parcial' => $fechasParcial,
+            'resumen'        => [
                 'total_estudiantes' => count($resultadoEstudiantes),
                 'total_clases'      => $totalClases,
                 'aprobados'         => $aprobados,

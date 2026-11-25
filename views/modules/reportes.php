@@ -33,6 +33,7 @@
                 <select class="form-select" id="select-parcial-reporte">
                     <option value="Parcial 1" selected>Parcial 1</option>
                     <option value="Parcial 2">Parcial 2</option>
+                    <option value="Reporte Semestre">Reporte Semestre</option>
                 </select>
             </div>
             <div class="col-md-4 col-12">

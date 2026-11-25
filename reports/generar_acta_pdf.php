@@ -262,13 +262,9 @@ if (count($estudiantes) === 0) {
 // ==============================================================================
 // SECCIÓN 4: DESGLOSE POR FECHAS DE CLASE
 // ==============================================================================
-if (count($fechas) > 0 && count($estudiantes) > 0) {
-    $pdf->Ln(6);
-    $pdf->tituloSeccion('4. DESGLOSE DE ASISTENCIA POR FECHA DE CLASE');
-    $pdf->Ln(1);
-
+function dibujarTablaFechas($pdf, $estudiantes, $listaFechas) {
     // Mostrar hasta 10 fechas por tabla para no salirse del ancho de la hoja
-    $bloques = array_chunk($fechas, 10);
+    $bloques = array_chunk($listaFechas, 10);
 
     foreach ($bloques as $bloque) {
         $numFechas = count($bloque);
@@ -331,6 +327,46 @@ if (count($fechas) > 0 && count($estudiantes) > 0) {
         }
 
         $pdf->Ln(3);
+    }
+}
+
+if (count($fechas) > 0 && count($estudiantes) > 0) {
+    $pdf->Ln(6);
+    $pdf->tituloSeccion('4. DESGLOSE DE ASISTENCIA POR FECHA DE CLASE');
+    $pdf->Ln(1);
+
+    if ($datos['parcial'] === 'Reporte Semestre') {
+        $fechasParcial = isset($datos['fechas_parcial']) ? $datos['fechas_parcial'] : [];
+        $fechasP1 = [];
+        $fechasP2 = [];
+
+        foreach ($fechas as $f) {
+            if (isset($fechasParcial[$f]) && $fechasParcial[$f] === 'Parcial 2') {
+                $fechasP2[] = $f;
+            } else {
+                $fechasP1[] = $f;
+            }
+        }
+
+        if (count($fechasP1) > 0) {
+            $pdf->SetFillColor(241, 245, 249);
+            $pdf->SetDrawColor(203, 213, 225);
+            $pdf->SetTextColor(30, 41, 59);
+            $pdf->SetFont('Arial', 'B', 8.5);
+            $pdf->Cell(190, 6, textoPdf('Sesiones - Parcial 1'), 1, 1, 'L', true);
+            dibujarTablaFechas($pdf, $estudiantes, $fechasP1);
+        }
+
+        if (count($fechasP2) > 0) {
+            $pdf->SetFillColor(241, 245, 249);
+            $pdf->SetDrawColor(203, 213, 225);
+            $pdf->SetTextColor(30, 41, 59);
+            $pdf->SetFont('Arial', 'B', 8.5);
+            $pdf->Cell(190, 6, textoPdf('Sesiones - Parcial 2'), 1, 1, 'L', true);
+            dibujarTablaFechas($pdf, $estudiantes, $fechasP2);
+        }
+    } else {
+        dibujarTablaFechas($pdf, $estudiantes, $fechas);
     }
 }
 
