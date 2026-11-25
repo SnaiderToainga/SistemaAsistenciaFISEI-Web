@@ -47,10 +47,17 @@ El sistema fue diseñado desde cero implementando el patrón **Modelo-Vista-Cont
 ┌───────────────────────────────────────┐   ┌─────────────────────────────────────────┐
 │        CONTROLADOR PRINCIPAL          │   │           MODELOS DE NEGOCIO            │
 │       controllers/controller.php      │──►│            models/*Model.php            │
-│  - Middleware de Sesión y Rutas       │   │  - Consultas preparadas PDO             │
-│  - Control de Roles (ADMIN / DOCENTE) │   │  - Transacciones atómicas (BEGIN/COMMIT)│
-│  - Whitelist de Vistas (Anti-LFI)     │   │  - Preservación estricta UID String     │
-└───────────────────┬───────────────────┘   └────────────────────┬────────────────────┘
+│  - Middleware de Sesión y Rutas       │   │  - Validaciones y reglas de negocio     │
+│  - Control de Roles (ADMIN / DOCENTE) │   │  - Manejo de Entidades (entities/*.php) │
+│  - Whitelist de Vistas (Anti-LFI)     │   └────────────────────┬────────────────────┘
+└───────────────────┬───────────────────┘                        │
+                    │                                            ▼
+                    │                       ┌─────────────────────────────────────────┐
+                    │                       │        CAPA DE DATOS (dao/*DAO.php)     │
+                    │                       │  - Consultas preparadas PDO (SQL)       │
+                    │                       │  - Transacciones atómicas (BEGIN/COMMIT)│
+                    │                       │  - Mapeo a Entidades (entities/*.php)   │
+                    │                       └────────────────────┬────────────────────┘
                     │                                            │
                     ▼                                            ▼
 ┌───────────────────────────────────────┐   ┌─────────────────────────────────────────┐
@@ -87,10 +94,10 @@ El sistema fue diseñado desde cero implementando el patrón **Modelo-Vista-Cont
      }
      ```
 
-4. **Modelos de Dominio y Persistencia (`models/`):**
-   - Encapsulan todas las consultas SQL utilizando **PDO con sentencias preparadas** para anular cualquier riesgo de Inyección SQL.
-   - **Transaccionalidad Atómica:** Operaciones críticas como guardar un estudiante y sus múltiples matrículas se ejecutan dentro de bloques `beginTransaction()`, `commit()` y `rollBack()`.
-   - **Preservación de Llaveros RFID:** El identificador del llavero se maneja estrictamente como `string` para garantizar que ceros a la izquierda (ej. `'0006047325'`) no sean truncados como enteros.
+4. **Modelos de Dominio, Entidades y Capa DAO (`models/`, `entities/`, `dao/`):**
+   - **Entidades (`entities/`):** Clases orientadas a objetos (`Usuario`, `Estudiante`, `Materia`, `Asistencia`) con propiedades tipadas, getters/setters y métodos `fromArray()` / `toArray()`.
+   - **Data Access Objects (`dao/`):** Concentran el 100% de las sentencias SQL y operaciones **PDO con sentencias preparadas**, transacciones atómicas (`beginTransaction()`, `commit()`, `rollBack()`) y preservación estricta de los UID RFID como `string` (`'0006047325'`).
+   - **Modelos (`models/`):** Contienen las reglas de negocio, validaciones (cédula de 10 dígitos, porcentajes FISEI) y orquestación, delegando las consultas SQL a la capa DAO.
 
 5. **Vistas Modulares y Frontend Desacoplado (`views/` y `assets/`):**
    - `views/template.php` provee el layout base institucional (paleta de la FISEI-UTA, Bootstrap 5.3, Bootstrap Icons y CDN de SweetAlert2).
@@ -159,6 +166,7 @@ Durante el diseño de la arquitectura se evaluó el uso tradicional de XAMPP (Ap
 
 ```text
 SistemaAsistenciaFISEI-Web/
+├── .dockerignore                       # Exclusión de archivos innecesarios en imagen Docker
 ├── .gitignore                          # Exclusión de credenciales locales, logs y temporales
 ├── .htaccess                           # Seguridad Apache (bloqueo de índices y archivos .sql/.env)
 ├── Dockerfile                          # Contenedor PHP 8.2 + Apache + pdo_pgsql para Render
@@ -169,27 +177,51 @@ SistemaAsistenciaFISEI-Web/
 │   ├── css/
 │   │   └── style.css                   # Estilos institucionales UTA (granate, badges, rfid-pulse)
 │   └── js/
-│       └── matriculacion.js            # Lógica AJAX, captura de tecla Enter del lector RFID y SweetAlert2
+│       ├── asistencia.js               # Lógica AJAX del pase de asistencia RFID en vivo
+│       ├── matriculacion.js            # Lógica AJAX, captura de tecla Enter del lector RFID y SweetAlert2
+│       └── reportes.js                 # Lógica AJAX de consolidado FISEI y descarga de actas PDF
 │
 ├── config/                             # Conexión y credenciales
 │   ├── database.php                    # Conexión PDO con Transaction Pooler de Supabase (puerto 6543)
 │   └── db_credentials.example.php     # Plantilla para credenciales seguras no versionadas
 │
 ├── controllers/                        # Controladores MVC y Endpoints AJAX
+│   ├── asistenciaAjaxController.php    # Endpoint AJAX: materias, fechas, listar, marcar_rfid, actualizar_estado
 │   ├── controller.php                  # Controlador central, Router y Middleware de Roles
 │   ├── estudianteAjaxController.php    # Endpoint AJAX: listar, materias, guardar, modificar, eliminar, buscar_rfid
 │   ├── loginController.php             # Endpoint AJAX: autenticación, verificación de hash y sesiones
-│   └── materiaAjaxController.php       # Endpoint AJAX: CRUD de materias y asignación docente (Solo ADMIN)
+│   ├── materiaAjaxController.php       # Endpoint AJAX: CRUD de materias y asignación docente (Solo ADMIN)
+│   └── reporteAjaxController.php       # Endpoint AJAX: dashboard, materias y consolidado por parcial
+│
+├── dao/                                # Capa de Acceso a Datos (SQL + PDO)
+│   ├── AsistenciaDAO.php               # Consultas y marcaciones RFID/manuales sobre `asistencias`
+│   ├── EstudianteDAO.php               # CRUD transaccional sobre `estudiantes` y `matriculas`
+│   ├── MateriaDAO.php                  # CRUD y cambio de estado sobre `materias`
+│   ├── ReporteDAO.php                  # Consultas de dashboard y consolidado de asistencias
+│   └── UsuarioDAO.php                  # Consultas y validación de usuarios/docentes en `usuarios`
 │
 ├── database/                           # Scripts de base de datos
 │   ├── fisei_supabase.sql              # DDL oficial con 5 tablas, llaves foráneas, índices y semillas
 │   └── fix_claves_semilla.sql          # Utilidad para corrección y cifrado de claves en desarrollo
 │
-├── models/                             # Capa de Acceso a Datos y Lógica de Negocio
-│   ├── estudianteModel.php             # Transacciones PDO de alumnos, matrículas y búsqueda RFID
-│   ├── loginModel.php                  # Validación de credenciales con password_verify()
-│   ├── materiaModel.php                # Consultas y actualización del catálogo de asignaturas
-│   └── model.php                       # Lista blanca de enlaces y despacho de módulos
+├── entities/                           # Entidades de Dominio (Objetos PHP)
+│   ├── Asistencia.php                  # Entidad Asistencia
+│   ├── Estudiante.php                  # Entidad Estudiante
+│   ├── Materia.php                     # Entidad Materia
+│   └── Usuario.php                     # Entidad Usuario (Admin / Docente)
+│
+├── libs/fpdf/                          # Librería FPDF para generación de actas en PDF
+│
+├── models/                             # Lógica de Negocio y Validaciones
+│   ├── asistenciaModel.php             # Reglas de marcación RFID, fechas y parciales
+│   ├── estudianteModel.php             # Validaciones de cédula, duplicados y matrículas
+│   ├── loginModel.php                  # Verificación de credenciales con password_verify()
+│   ├── materiaModel.php                # Validaciones de código, periodo y docente
+│   ├── model.php                       # Lista blanca de enlaces y despacho de módulos
+│   └── reporteModel.php                # Regla de cálculo FISEI (80% / APROBADO / EN RIESGO / REPROBADO)
+│
+├── reports/
+│   └── generar_acta_pdf.php            # Generador de Acta Oficial de Asistencia FISEI en PDF
 │
 └── views/                              # Capa de Presentación
     ├── template.php                    # Plantilla maestra (Layout con Navbar dinámica institucional)
